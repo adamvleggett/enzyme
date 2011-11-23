@@ -1,0 +1,14 @@
+# Enzyme Hardware Abstraction Layer: Windows Service
+
+!IF "$(_BUILDARCH)" == "x86"
+TARGETNAME = enzyme32
+!ELSE
+TARGETNAME = enzyme64
+!ENDIF
+TARGETPATH = obj
+TARGETTYPE = DRIVER
+
+INCLUDES   = %BUILD%\inc
+LIBS       = %BUILD%\lib
+
+SOURCES    = enzyme_winservice.c enzyme_winservice.rc

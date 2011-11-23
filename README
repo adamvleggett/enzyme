@@ -1,0 +1,28 @@
+Enzyme
+Copyright (c)2011 - Adam Leggett
+
+-------------------------------------------
+
+Enzyme is a C++ framework for accessing hardware features from
+user mode applications on Windows and Linux, with the possibility
+of additional future ports or even support for hardware emulation.
+Enzyme is intended to be flexible enough to be the basis for a
+user mode hardware driver on any OS.
+
+It is currently experimental, and this code does not even build
+yet.
+
+The design goals:
+
+-	Easy to use API; simple use cases should be simple to write.
+
+-	Flexibility to support complex use cases.
+
+-	Portability to any OS supporting an ANSI C++ compiler with STL.
+
+-	Small overhead; high performance.
+
+-	No kernel module required for recent Linux versions.
+
+This project was inspired by Yariv Kaplan's WinIo library, which
+can be downloaded from http://www.internals.com/.
