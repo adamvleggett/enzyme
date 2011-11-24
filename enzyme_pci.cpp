@@ -17,6 +17,41 @@
 
 
 ///
+/// @brief Vendor AutoLex constructor
+///
+
+enzyme::pci::Vendor::Vendor(unsigned short vendor)
+    : mVendor(vendor)
+{
+}
+
+
+///
+/// @brief Convert vendor ID to string
+///
+
+std::ostream& enzyme::pci::Vendor::lex(std::ostream& os) const
+{
+    if(mVendorID.empty())
+    {
+        VendorID* cur = gVendor;
+        VendorID* end = gVendor + (sizeof(gVendor) / sizeof(gVendor[0]));
+
+        while(cur < end)
+        {
+            mVendorID.insert(std::make_pair(cur->id, cur->name));
+            cur++;
+        }
+    }
+
+    return os;
+}
+
+
+// ---------------------------------------------------------------------------
+
+
+///
 /// @brief Search for devices by vendor/device ID
 ///
 
@@ -50,27 +85,56 @@ enzyme::pci::Device* enzyme::pci::Enumerator::device(const Location& location)
 }
 
 
+// ---------------------------------------------------------------------------
+
+
 ///
-/// @brief Populate vendor ID table
+/// @brief Detect and map MMR and PMR BARs
 ///
 
-void enzyme::pci::Enumerator::vendorinit()
+enzyme::pci::Client::Client(const Device& device, bool writable, bool exclusive)
+    : mDevice(device)
 {
-    Vendor* cur = gVendor;
-    Vendor* end = gVendor + (sizeof(gVendor) / sizeof(gVendor[0]));
+    mImpl = new os::Client(device, writable, exclusive);
 
-    while(cur < end)
+    // Detect MMR BAR: Not prefetchable and under 1MB
+    std::set<const mem::Resource*>::const_iterator mi;
+    for(mi = device.mem().begin(); mi != device.mem().end(); mi++)
     {
-        mVendor.insert(std::make_pair(cur->id, cur->name));
-        cur++;
+        if(!((*mi)->flag() & 0x8) && ((*mi)->size() > 0) && ((*mi)->size() < 1 * 1024 * 1024))
+            break;
+    }
+
+    if(mi != device.mem().end())
+        mMMReg32 = new mem::Client<uint32_t>(**mi);
+    else
+        mMMReg32 = new mem::Client<uint32_t>(mem::dummy::gResource);
+
+        mMMReg16 = new mem::Client<uint16_t>(*mMMReg32);
+        mMMReg8 = new mem::Client<uint8_t>(*mMMReg32);
+
+    // Detect PMR BAR: First I/O BAR of at least 1KB
+    std::set<const port::Resource*>::const_iterator pi;
+    for(pi = device.port().begin(); pi != device.port().end(); pi++)
+    {
+        if((*pi)->size() >= 1024)
+            break;
     }
 }
 
 
-// ---------------------------------------------------------------------------
+///
+/// @brief Unmap MMR and PMR BARs
+///
 
+enzyme::pci::Client::~Client()
+{
+    delete mMMReg32;
+    delete mMMReg16;
+    delete mMMReg8;
 
-// ---------------------------------------------------------------------------
+    delete mImpl;
+}
 
 
 ///
@@ -81,6 +145,8 @@ void enzyme::pci::Client::cfgr(size_t offset, size_t len, void* dst)
 {
     if(len > 4096)
         throw std::logic_error("PCI configuration space: Length out of range");
+
+    mImpl->cfgr(offset, len, dst);
 }
 
 
@@ -92,4 +158,6 @@ void enzyme::pci::Client::cfgw(size_t offset, size_t len, const void* src)
 {
     if(len > 4096)
         throw std::logic_error("PCI configuration space: Length out of range");
+
+    mImpl->cfgw(offset, len, src);
 }

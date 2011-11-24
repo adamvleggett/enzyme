@@ -22,7 +22,9 @@
 #include "enzyme_winkernel.h"
 #include "enzyme_winmem.h"
 #include "enzyme_winport.h"
+
 #include "../enzyme_pci.h"
+#include "../win_kernel/enzyme_winservice.h"
 
 
 namespace enzyme
@@ -57,9 +59,11 @@ namespace enzyme
             {
             protected:
                 Enumerator& mEnumerator;
+
                 SP_DEVINFO_DATA mDI;
                 SP_DEVINSTALL_PARAMS mDIP;
 
+                // TODO:make const
                 std::vector<mem::os::Resource> mMemResourceOS;
                 std::vector<port::os::Resource> mPortResourceOS;
 
@@ -68,7 +72,7 @@ namespace enzyme
                 ~Device();
 
                 Enumerator& enumerator() const { return mEnumerator; }
-                SP_DEVINFO_DATA* devinfodata() { return &mDI; }
+                const SP_DEVINFO_DATA& devinfodata() const { return mDI; }
             };
 
 
@@ -79,8 +83,7 @@ namespace enzyme
             class Client : public kernel::Client
             {
             private:
-                pci::Client& mOwner;
-                Device& mDevice;
+                const Device& mDevice;
                 bool mServiceDisabled;
 
             public:
@@ -89,12 +92,13 @@ namespace enzyme
                 /// @brief If exclusive, disable the existing kernel service for this device
                 ///
 
-                Client(pci::Client& owner, Device& device, bool writable, bool exclusive)
-                    : mOwner(owner)
-                    , mDevice(device)
+                Client(const Device& device, bool writable, bool exclusive)
+                    : mDevice(device)
                 {
                     if(exclusive)
                     {
+                        SP_DEVINFO_DATA devinfodata = mDevice.devinfodata();
+
                         SP_PROPCHANGE_PARAMS pcp;
                         pcp.ClassInstallHeader.cbSize = sizeof(SP_CLASSINSTALL_HEADER);
                         pcp.ClassInstallHeader.InstallFunction = DIF_PROPERTYCHANGE;
@@ -102,18 +106,18 @@ namespace enzyme
                         pcp.Scope       = DICS_FLAG_CONFIGSPECIFIC;
                         pcp.HwProfile   = 0;
 
-                        if(!SetupDiSetClassInstallParams(device.enumerator().devinfo(), device.devinfodata(), &pcp.ClassInstallHeader, sizeof(pcp)))
+                        if(!SetupDiSetClassInstallParams(device.enumerator().devinfo(), &devinfodata, &pcp.ClassInstallHeader, sizeof(pcp)))
                         {
                             throw std::runtime_error("Error stopping service: " + kernel::lasterror());
                         }
 
-                        if(!SetupDiCallClassInstaller(DIF_PROPERTYCHANGE, device.enumerator().devinfo(), device.devinfodata()))
+                        if(!SetupDiCallClassInstaller(DIF_PROPERTYCHANGE, device.enumerator().devinfo(), &devinfodata))
                         {
                             throw std::runtime_error("Error stopping service: " + kernel::lasterror());
                         }
 
                         SP_DEVINSTALL_PARAMS dip = { sizeof(dip) };
-                        if(SetupDiGetDeviceInstallParams(device.enumerator().devinfo(), device.devinfodata(), &dip) && (dip.Flags & (DI_NEEDRESTART | DI_NEEDREBOOT)))
+                        if(SetupDiGetDeviceInstallParams(device.enumerator().devinfo(), &devinfodata, &dip) && (dip.Flags & (DI_NEEDRESTART | DI_NEEDREBOOT)))
                         {
                             throw std::runtime_error("Error stopping service: Need reboot for exclusive access");
                         }
@@ -131,6 +135,8 @@ namespace enzyme
                 {
                     if(mServiceDisabled)
                     {
+                        SP_DEVINFO_DATA devinfodata = mDevice.devinfodata();
+
                         SP_PROPCHANGE_PARAMS pcp;
                         pcp.ClassInstallHeader.cbSize = sizeof(SP_CLASSINSTALL_HEADER);
                         pcp.ClassInstallHeader.InstallFunction = DIF_PROPERTYCHANGE;
@@ -138,13 +144,13 @@ namespace enzyme
                         pcp.Scope       = DICS_FLAG_GLOBAL;
                         pcp.HwProfile   = 0;
 
-                        if(SetupDiSetClassInstallParams(mDevice.enumerator().devinfo(), mDevice.devinfodata(), &pcp.ClassInstallHeader, sizeof(pcp)))
+                        if(SetupDiSetClassInstallParams(mDevice.enumerator().devinfo(), &devinfodata, &pcp.ClassInstallHeader, sizeof(pcp)))
                         {
-                            SetupDiCallClassInstaller(DIF_PROPERTYCHANGE, mDevice.enumerator().devinfo(), mDevice.devinfodata());
+                            SetupDiCallClassInstaller(DIF_PROPERTYCHANGE, mDevice.enumerator().devinfo(), &devinfodata);
                         }
 
                         SP_DEVINSTALL_PARAMS dip = { sizeof(dip) };
-                        if(SetupDiGetDeviceInstallParams(mDevice.enumerator().devinfo(), mDevice.devinfodata(), &dip) && (dip.Flags & (DI_NEEDRESTART | DI_NEEDREBOOT)))
+                        if(SetupDiGetDeviceInstallParams(mDevice.enumerator().devinfo(), &devinfodata, &dip) && (dip.Flags & (DI_NEEDRESTART | DI_NEEDREBOOT)))
                         {
 //                            std::clog << "Error restarting service: Need reboot for exclusive access" << std::endl;
                         }

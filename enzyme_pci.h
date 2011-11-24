@@ -116,20 +116,20 @@ namespace enzyme
 
         public:
             Config()
-                : mVendor(0xFFFF)
-                , mDevice(0xFFFF)
-                , mSubVendor(0xFFFF)
-                , mSubDevice(0xFFFF)
+                : mVendor(~0)
+                , mDevice(~0)
+                , mSubVendor(~0)
+                , mSubDevice(~0)
                 , mClass(0)
             {
             }
 
-            Config(unsigned short vendor, unsigned short device, unsigned short subvendor = 0xFFFF, unsigned short subdevice = 0xFFFF, unsigned int class_ = 0)
+            Config(unsigned short vendor, unsigned short device, unsigned short subvendor = ~0, unsigned short subdevice = ~0, unsigned int classid = 0)
                 : mVendor(vendor)
                 , mDevice(device)
                 , mSubVendor(subvendor)
                 , mSubDevice(subdevice)
-                , mClass(class_)
+                , mClass(classid)
             {
             }
 
@@ -137,7 +137,7 @@ namespace enzyme
             unsigned short device()     const { return mDevice; }
             unsigned short subvendor()  const { return mSubVendor; }
             unsigned short subdevice()  const { return mSubDevice; }
-            unsigned int dclass()       const { return mClass; }
+            unsigned int   classid()    const { return mClass; }
 
             std::ostream& lex(std::ostream& os) const
             {
@@ -154,6 +154,22 @@ namespace enzyme
 
 
         ///
+        /// @brief PCI vendor name
+        ///
+
+        class Vendor : public AutoLex
+        {
+        private:
+            static std::tr1::unordered_map<unsigned short, const char*> mVendorID;
+            unsigned short mVendor;
+
+        public:
+            Vendor(unsigned short vendor);
+            std::ostream& lex(std::ostream& os) const;
+        };
+
+
+        ///
         /// @brief PCI device
         ///
 
@@ -162,31 +178,35 @@ namespace enzyme
         class Device : public enzyme::Device
         {
         protected:
-            Enumerator& mEnumerator;
-            Location mLocation;
-            Config mConfig;
+            const Enumerator& mEnumerator;
+            const Location mLocation;
+            const Config mConfig;
+            const Vendor mVendor;
 
-            std::set<mem::Resource*> mMemResource;
-            std::set<port::Resource*> mPortResource;
+            std::set<const mem::Resource*> mMemResource;
+            std::set<const port::Resource*> mPortResource;
 
         public:
-            Device(Enumerator& enumerator);
-//            ~Device();
+            Device(const Enumerator& enumerator, const Location& location, const Config& config)
+                : enzyme::Device(location, config, mVendor, mVendor)
+                , mEnumerator(enumerator)
+                , mLocation(location)
+                , mConfig(config)
+                , mVendor(config.vendor())
+            {
+            }
 
-            Enumerator& enumerator()            const { return mEnumerator; }
+            const Enumerator& enumerator()  const { return mEnumerator; }
+            const Location& location()      const { return mLocation; }
+            const Config& config()          const { return mConfig; }
 
-            const Location& location()          const { return mLocation; }
-            const Config& config()              const { return mConfig; }
-
-            const std::set<mem::Resource*>& mem()     { return mMemResource; }
-            const std::set<port::Resource*>& port()   { return mPortResource; }
+            const std::set<const mem::Resource*>& mem()   const  { return mMemResource; }
+            const std::set<const port::Resource*>& port() const  { return mPortResource; }
 
             bool operator<(const Device& other) const
             {
                 return (location() < other.location());
             }
-
-            friend class Enumerator;
         };
 
 
@@ -196,37 +216,37 @@ namespace enzyme
 
         class Client
         {
-        protected:
-            os::Client& mOS;
-            pci::Device& mDevice;
+        private:
+            os::Client* mImpl;
+            const pci::Device& mDevice;
 
-            mem::Client<uint32_t>&  mMMReg32;
-            mem::Client<uint16_t>&  mMMReg16;
-            mem::Client<uint8_t>&   mMMReg8;
+            mem::Client<uint32_t>*  mMMReg32;
+            mem::Client<uint16_t>*  mMMReg16;
+            mem::Client<uint8_t>*   mMMReg8;
 
-            port::Client<uint32_t>& mPMReg32;
-            port::Client<uint16_t>& mPMReg16;
-            port::Client<uint8_t>&  mPMReg8;
+            port::Client<uint32_t>* mPMReg32;
+            port::Client<uint16_t>* mPMReg16;
+            port::Client<uint8_t>*  mPMReg8;
 
         public:
-            Client(Device& dev, bool writable = true, bool exclusive = false);
+            Client(const Device& dev, bool writable = true, bool exclusive = false);
             ~Client();
 
-            Device& device() { return mDevice; }
+            const Device& device() const { return mDevice; }
 
             /// @brief Memory Mapped Register I/O
-            mem::Client<uint32_t>&  mmreg32() { return mMMReg32; }
-            mem::Client<uint16_t>&  mmreg16() { return mMMReg16; }
-            mem::Client<uint8_t>&   mmreg8()  { return mMMReg8; }
+            const mem::Client<uint32_t>&  mmreg32() const { return *mMMReg32; }
+            const mem::Client<uint16_t>&  mmreg16() const { return *mMMReg16; }
+            const mem::Client<uint8_t>&   mmreg8()  const { return *mMMReg8; }
 
             /// @brief Port Mapped Register I/O
-            port::Client<uint32_t>& pmreg32() { return mPMReg32; }
-            port::Client<uint16_t>& pmreg16() { return mPMReg16; }
-            port::Client<uint8_t>&  pmreg8()  { return mPMReg8; }
+            const port::Client<uint32_t>& pmreg32() const { return *mPMReg32; }
+            const port::Client<uint16_t>& pmreg16() const { return *mPMReg16; }
+            const port::Client<uint8_t>&  pmreg8()  const { return *mPMReg8; }
 
             /// @brief PCI Config I/O
-            void             cfgr(size_t offset, size_t len, void* dst);
-            void             cfgw(size_t offset, size_t len, const void* src);
+            void cfgr(size_t offset, size_t len, void* dst);
+            void cfgw(size_t offset, size_t len, const void* src);
 
             inline uint8_t   cfgr8 (size_t offset) { uint8_t  r; cfgr(offset, 1, &r); return r; }
             inline uint16_t  cfgr16(size_t offset) { uint16_t r; cfgr(offset, 2, &r); return r; }
@@ -246,10 +266,6 @@ namespace enzyme
         {
         protected:
             std::list<Device> mDevice;
-
-        private:
-            std::tr1::unordered_map<unsigned short, const char*> mVendor;
-            void vendorinit();
 
         public:
             Device* device(const Location& location);

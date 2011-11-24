@@ -9,6 +9,18 @@
 
 
 #include "enzyme_mem.h"
-#include "enzyme_platform.h"
 
 
+// ---------------------------------------------------------------------------
+
+
+namespace enzyme
+{
+    namespace mem
+    {
+        namespace dummy
+        {
+            Resource gResource;
+        };
+    };
+};

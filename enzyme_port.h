@@ -58,8 +58,8 @@ namespace enzyme
             {
             }
 
-            uint16_t base() { return mBase; }
-            uint16_t size() { return mSize; }
+            uint16_t base() const { return mBase; }
+            uint16_t size() const { return mSize; }
 
             bool compare(uint16_t base, uint16_t size) const
             {
@@ -93,16 +93,16 @@ namespace enzyme
                 delete mImpl;
             }
 
-            T read(unsigned short offset)
+            T read(unsigned short offset) const
             {
                 return 0;
             }
 
-            void write(unsigned short offset, T value)
+            void write(unsigned short offset, T value) const
             {
             }
 
-            impl::Client* client()
+            impl::Client* client() const
             {
                 return mImpl->client();
             }

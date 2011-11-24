@@ -42,8 +42,8 @@ namespace enzyme
             {
             public:
                 virtual ~Client() { };
-                virtual Client* client(Cache cache, uintmax_t offset, uintmax_t size) = 0;
-                virtual volatile void* vaddr() = 0;
+                virtual Client* client(Cache cache, uintmax_t offset, uintmax_t size) const = 0;
+                virtual volatile void* vaddr() const = 0;
             };
         };
 
@@ -57,13 +57,20 @@ namespace enzyme
         protected:
             uintmax_t mBase;
             uintmax_t mSize;
-            uintmax_t mFlags;
+            uintmax_t mFlag;
 
         public:
-            Resource(uintmax_t base, uintmax_t size, uintmax_t flags)
+            Resource(uintmax_t base, uintmax_t size, uintmax_t flag)
                 : mBase(base)
                 , mSize(size)
-                , mFlags(flags)
+                , mFlag(flag)
+            {
+            }
+
+            Resource(const Resource& other)
+                : mBase(other.mBase)
+                , mSize(other.mSize)
+                , mFlag(other.mFlag)
             {
             }
 
@@ -71,9 +78,9 @@ namespace enzyme
             {
             }
 
-            uintmax_t base() { return mBase; }
-            uintmax_t size() { return mSize; }
-            uintmax_t flags() { return mFlags; }
+            uintmax_t base() const { return mBase; }
+            uintmax_t size() const { return mSize; }
+            uintmax_t flag() const { return mFlag; }
 
             bool compare(uintmax_t base, uintmax_t size) const
             {
@@ -85,7 +92,7 @@ namespace enzyme
                 return (mBase < other.mBase);
             }
 
-            virtual impl::Client* client(Cache cache, uintmax_t offset, uintmax_t size) = 0;
+            virtual impl::Client* client(Cache cache, uintmax_t offset, uintmax_t size) const = 0;
         };
 
 
@@ -108,10 +115,11 @@ namespace enzyme
             static std::runtime_error mWriteError;
 
         public:
-            Client(Resource& resource, Cache cache, uintmax_t offset = 0, uintmax_t size = ~(uintmax_t)0)
-                : mImpl(resource.client(cache, offset, size))
+            Client(const Resource& resource, Cache cache = UC, uintmax_t offset = 0, uintmax_t size = ~(uintmax_t)0)
+                : Resource(resource)
             {
-                mVirt = mImpl->vaddr();
+                mImpl = client(cache, offset, size);
+                mVirt = reinterpret_cast<volatile T*>(mImpl->vaddr());
             }
 
             ~Client()
@@ -119,36 +127,76 @@ namespace enzyme
                 delete mImpl;
             }
 
-            void read(size_t offset, size_t cnt, T* dst)
+            void read(size_t offset, size_t cnt, T* dst) const
             {
                 if((offset + cnt) * sizeof(T) >= size())
                     throw mReadError;
                 std::copy(mVirt + offset, mVirt + offset + cnt, dst);
             }
 
-            void write(size_t offset, size_t cnt, const T* src)
+            void write(size_t offset, size_t cnt, const T* src) const
             {
                 if((offset + cnt) * sizeof(T) >= size())
                     throw mWriteError;
                 std::copy(src, src + cnt, mVirt + offset);
             }
 
-            T read(size_t offset)
+            T read(size_t offset) const
             {
                 T value;
                 read(offset, 1, &value);
                 return value;
             }
 
-            void write(size_t offset, T value)
+            void write(size_t offset, T value) const
             {
                 write(offset, 1, &value);
             }
 
-            impl::Client* client(Cache cache, uintmax_t offset, uintmax_t size)
+            impl::Client* client(Cache cache, uintmax_t offset, uintmax_t size) const
             {
                 return mImpl->client(cache, offset, size);
             }
+        };
+
+
+        ///
+        /// @brief Dummy memory resource
+        ///
+        /// We do not, for example, want to burden reads and writes to/from PCI BARs
+        /// that do not exist with conditionals, so we provide a resource with size 0.
+        ///
+
+        namespace dummy
+        {
+            class Client : public impl::Client
+            {
+                volatile void* vaddr() const
+                {
+                    return NULL;
+                }
+
+                impl::Client* client(Cache cache, uintmax_t offset, uintmax_t size) const
+                {
+                    return const_cast<Client*>(this); // FIXME!!
+                }
+            };
+
+            class Resource : public mem::Resource
+            {
+            public:
+                Resource()
+                    : mem::Resource(0, 0, 0)
+                {
+                }
+
+                impl::Client* client(Cache cache, uintmax_t offset, uintmax_t size_) const
+                {
+                    return new Client;
+                }
+            };
+
+            extern Resource gResource;
         };
     };
 };

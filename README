@@ -20,7 +20,7 @@ The design goals:
 
 -	Portability to any OS supporting an ANSI C++ compiler with STL.
 
--	Small overhead; high performance.
+-	Small overhead; high performance; minimal stack depth.
 
 -	No kernel module required for recent Linux versions.
 

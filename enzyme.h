@@ -70,30 +70,29 @@ namespace enzyme
     {
     protected:
         std::string mEnumerator;
-        std::string mManufacturer;
         std::string mService;
-        std::string mName;
 
         const AutoLex& mLocation;
         const AutoLex& mClass;
+        const AutoLex& mVendor;
+        const AutoLex& mDescription;
 
     public:
-        Device(const std::string& enumerator, const std::string& manufacturer, const std::string& name, const AutoLex& location, const AutoLex& cls, bool active)
-            : mName(name)
-            , mEnumerator(enumerator)
-            , mManufacturer(manufacturer)
-            , mLocation(location)
-            , mClass(cls)
+        Device(const AutoLex& location, const AutoLex& classid, const AutoLex& vendor, const AutoLex& description)
+            : mLocation(location)
+            , mClass(classid)
+            , mVendor(vendor)
+            , mDescription(description)
         {
         }
 
         const std::string& enumerator()     const { return mEnumerator; }
-        const std::string& manufacturer()   const { return mManufacturer; }
         const std::string& service()        const { return mService; }
-        const std::string& name()           const { return mName; }
 
         const AutoLex& location()           const { return mLocation; }
         const AutoLex& classid()            const { return mClass; }
+        const AutoLex& vendor()             const { return mVendor; }
+        const AutoLex& description()        const { return mDescription; }
     };
 
 

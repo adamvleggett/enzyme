@@ -138,13 +138,10 @@ enzyme::pci::os::Enumerator::~Enumerator()
 ///
 
 enzyme::pci::os::Device::Device(Enumerator& enumerator, const Location& loc, const Config& cfg, const PTSTR service, HDEVINFO di, SP_DEVINFO_DATA& didata)
-    : pci::Device(enumerator)
+    : pci::Device(enumerator, loc, cfg)
     , mEnumerator(enumerator)
     , mDI(didata)
 {
-    mLocation   = loc;
-    mConfig     = cfg;
-
 #ifdef UNICODE
     size_t len = wcslen(service);
     char* cservice = new char[len];
@@ -165,22 +162,24 @@ enzyme::pci::os::Device::Device(Enumerator& enumerator, const Location& loc, con
         {
             MEM_RESOURCE mr;
             if(CM_Get_Res_Des_Data(rd, &mr, sizeof(mr), 0) == CR_SUCCESS)
-            {
                 mMemResourceOS.push_back(mr);
-                mMemResource.insert(&mMemResourceOS.back());
-            }
         }
         rd = logconf;
         while(CM_Get_Next_Res_Des(&rd, rd, ResType_IO, NULL, 0) == CR_SUCCESS)
         {
             IO_RESOURCE ior;
             if(CM_Get_Res_Des_Data(rd, &ior, sizeof(ior), 0) == CR_SUCCESS)
-            {
                 mPortResourceOS.push_back(ior);
-                mPortResource.insert(&mPortResourceOS.back());
-            }
         }
     }
+
+    std::vector<mem::os::Resource>::iterator mi;
+    for(mi = mMemResourceOS.begin(); mi != mMemResourceOS.end(); mi++)
+        mMemResource.insert(&*mi);
+
+    std::vector<port::os::Resource>::iterator pi;
+    for(pi = mPortResourceOS.begin(); pi != mPortResourceOS.end(); pi++)
+        mPortResource.insert(&*pi);
 }
 
 

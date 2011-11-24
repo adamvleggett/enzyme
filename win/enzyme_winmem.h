@@ -21,7 +21,9 @@
 #endif
 
 #include "enzyme_winkernel.h"
+
 #include "../enzyme_mem.h"
+#include "../win_kernel/enzyme_winservice.h"
 
 
 namespace enzyme
@@ -75,14 +77,14 @@ namespace enzyme
                     DeviceIoControl(handle(), IOCTL_ENZYME_UNMAP, &in, sizeof(in), NULL, 0, &rlen, NULL);
                 }
 
-                impl::Client* client(Cache cache, uintmax_t offset, uintmax_t size)
-                {
-                    return this;
-                }
-
-                volatile void* vaddr()
+                volatile void* vaddr() const
                 {
                     return reinterpret_cast<void*>(mData.vaddr);
+                }
+
+                impl::Client* client(Cache cache, uintmax_t offset, uintmax_t size) const
+                {
+                    return const_cast<Client*>(this); // FIXME!!
                 }
             };
 
@@ -105,7 +107,7 @@ namespace enzyme
                 {
                 }
 
-                impl::Client* client(Cache cache, uintmax_t offset, uintmax_t size_)
+                impl::Client* client(Cache cache, uintmax_t offset, uintmax_t size_) const
                 {
                     return new Client(base(), size(), cache, offset, size_);
                 }

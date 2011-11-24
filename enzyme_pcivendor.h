@@ -22,9 +22,9 @@ namespace enzyme
             unsigned short id;
             const char* name;
         }
-        Vendor;
+        VendorID;
 
-        static Vendor gVendor[] =
+        static VendorID gVendor[] =
         {
             { 0x0000, "Gammagraphx, Inc." },
             { 0x0010, "Allied Telesis" },

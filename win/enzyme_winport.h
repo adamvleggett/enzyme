@@ -21,7 +21,9 @@
 #endif
 
 #include "enzyme_winkernel.h"
+
 #include "../enzyme_port.h"
+#include "../win_kernel/enzyme_winservice.h"
 
 
 namespace enzyme

@@ -16,8 +16,6 @@
 #include <string>
 #include <windows.h>
 
-#include "../win_kernel/enzyme_winservice.h"
-
 
 namespace enzyme
 {
