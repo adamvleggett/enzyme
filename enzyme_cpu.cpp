@@ -8,6 +8,7 @@
 // ---------------------------------------------------------------------------
 
 
+#include <cstring>
 #include "enzyme_cpu.h"
 
 #ifdef _WIN32
@@ -134,7 +135,7 @@ enzyme::cpu::Enumerator::Enumerator()
     unsigned short ind = 0;
     while(ind < cnt)
     {
-        child().push_back(new Core(cls, mfr, name, *die, ind));
+        child().push_back(new Core(cls, mfr, name));
         ind++;
     }
 }

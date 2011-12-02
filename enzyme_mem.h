@@ -13,6 +13,7 @@
 #define _enzyme_mem_h_
 
 
+#include <stdexcept>
 #include "enzyme.h"
 
 

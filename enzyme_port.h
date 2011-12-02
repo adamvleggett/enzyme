@@ -70,6 +70,8 @@ namespace enzyme
             {
                 return (mBase < other.mBase);
             }
+
+            virtual impl::Client* client() const = 0;
         };
 
 

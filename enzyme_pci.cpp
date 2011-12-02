@@ -95,7 +95,7 @@ enzyme::pci::Device* enzyme::pci::Enumerator::device(const Location& location)
 enzyme::pci::Client::Client(const Device& device, bool writable, bool exclusive)
     : mDevice(device)
 {
-    mImpl = new os::Client(device, writable, exclusive);
+    mImpl = new os::Client(reinterpret_cast<const os::Device&>(device), writable, exclusive);
 
     // Detect MMR BAR: Not prefetchable and under 1MB
     std::set<const mem::Resource*>::const_iterator mi;

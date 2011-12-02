@@ -16,12 +16,32 @@
 // ---------------------------------------------------------------------------
 
 
+namespace enzyme
+{
+    class EmptyLex : public AutoLex
+    {
+        std::ostream& lex(std::ostream& os) const { return os; }
+    };
+
+    class SystemLex : public AutoLex
+    {
+        std::ostream& lex(std::ostream& os) const { return (os << "System"); }
+    };
+
+    static EmptyLex gEmpty;
+    static SystemLex gSystem;
+};
+
+
+// ---------------------------------------------------------------------------
+
+
 ///
 /// @brief System Enumerator constructor
 ///
 
 enzyme::Enumerator::Enumerator()
-    : enzyme::Device("", "", "System", gEmpty, gEmpty, true)
+    : enzyme::Device(gEmpty, gEmpty, gEmpty, gSystem)
 {
     mCPU = new cpu::Enumerator;
     mChild.insert(mChild.end(), cpu().child().begin(), cpu().child().end());
