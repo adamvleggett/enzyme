@@ -28,13 +28,15 @@ bool enzyme::kernel::have_sysfs()
 
     if(already)
         return result;
-    already = true;
 
     struct stat st;
     if(stat("/sys", &st) < 0)
-        return (result = false);
-    if((st.st_mode & S_IFMT) != S_IFDIR)
-        return (result = false);
+        result = false;
+    else if((st.st_mode & S_IFMT) != S_IFDIR)
+        result = false;
     else
-        return (result = true);
+        result = true;
+
+    already = true;
+    return result;
 }
